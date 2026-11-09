@@ -1,0 +1,110 @@
+name: Task
+description: 一个可实现的贡献任务
+title: "[MVP1] "
+labels: ["type/task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先搜索已有 Issue，确认任务没有重复。任务完成后由测试执行人按验收标准验证。
+
+  - type: input
+    id: goal
+    attributes:
+      label: 目标
+      description: 用一句话说明要完成什么。
+      placeholder: 例如：实现文件树导航
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: 动机、上下文与相关讨论。
+      placeholder: 为什么需要这个任务？
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 范围
+      description: 本任务包含的内容。
+      placeholder: 列出要实现的部分。
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: 非目标
+      description: 明确排除的内容，避免范围蔓延。
+      placeholder: 本任务不处理的部分。
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 可检查的完成条件，建议逐条列出。
+      placeholder: |
+        - [ ] 条件一
+        - [ ] 条件二
+    validations:
+      required: true
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: 影响范围
+      description: 可多选。
+      multiple: true
+      options:
+        - protocol
+        - core
+        - render
+        - server
+        - tui
+        - cli
+        - docs
+        - ci
+    validations:
+      required: true
+
+  - type: input
+    id: owner
+    attributes:
+      label: Owner
+      description: 负责该任务的贡献者 handle。
+      placeholder: 例如：ylgd0915
+    validations:
+      required: true
+
+  - type: input
+    id: tester
+    attributes:
+      label: 测试执行人
+      description: 默认与 Owner 相同；如需调整，填写 handle。
+      placeholder: 留空表示与 Owner 相同
+
+  - type: input
+    id: docs
+    attributes:
+      label: 关联文档
+      description: 对应的 MVP 或 crate 文档路径。
+      placeholder: docs/MVP1/design/renderer.md
+
+  - type: input
+    id: session
+    attributes:
+      label: Agent session
+      description: 如有 Agent 参与，填写归档路径。
+      placeholder: docs/archive/sessions/2026-11-10-handle-topic.md
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 已搜索现有 Issue，确认该任务没有重复。
+          required: true
+        - label: 内容已移除密钥、令牌、个人路径等敏感信息。
+          required: true

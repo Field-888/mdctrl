@@ -1,0 +1,11 @@
+[package]
+name = "mdctrl-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+mdctrl-core = { workspace = true }
+mdctrl-render = { workspace = true }
+mdctrl-protocol = { workspace = true }

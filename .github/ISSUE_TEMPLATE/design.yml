@@ -1,0 +1,84 @@
+name: Design
+description: 提出需要讨论的设计或接口问题
+title: "[Design] "
+labels: ["type/design"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        设计讨论形成结论后，请写回 `docs/MVPn/design/`，Issue 保留讨论过程。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题
+      description: 需要决策的核心问题。
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景与现状
+      description: 现有实现、约束与相关文档。
+    validations:
+      required: true
+
+  - type: textarea
+    id: options
+    attributes:
+      label: 候选方案
+      description: 至少列出两个方案，并说明各自优缺点。
+    validations:
+      required: true
+
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: 取舍与风险
+      description: 兼容性、性能、维护成本与迁移影响。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: 影响范围
+      description: 可多选。
+      multiple: true
+      options:
+        - protocol
+        - core
+        - render
+        - server
+        - tui
+        - cli
+        - docs
+        - ci
+    validations:
+      required: true
+
+  - type: input
+    id: conclusion
+    attributes:
+      label: 结论落点
+      description: 结论将写入的文档路径。
+      placeholder: docs/MVP1/design/transport.md
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: 关联 Issue 或 PR
+      placeholder: "#12"
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 已搜索现有 Issue，确认该设计问题没有重复。
+          required: true
+        - label: 同意将结论写回 docs/MVPn/design/。
+          required: true

@@ -1,0 +1,100 @@
+name: Bug
+description: 报告可复现的缺陷
+title: "[Bug] "
+labels: ["type/bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请提供最小复现步骤。安全漏洞请使用私有报告渠道，不要提交公开 Issue。
+
+  - type: textarea
+    id: symptom
+    attributes:
+      label: 现象
+      description: 用一句话描述问题。
+      placeholder: 例如：表格中的 CJK 文本宽度计算错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 按顺序列出操作，并附最小输入文件或命令。
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 错误输出、崩溃信息或渲染异常。
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      description: 操作系统、终端、mdctrl 版本、Rust 版本与安装方式。
+      placeholder: |
+        - OS:
+        - Terminal:
+        - mdctrl --version:
+        - Rust:
+        - 安装方式:
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志或截图
+      description: 使用代码块粘贴日志；截图可直接拖入。
+      render: text
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: 影响范围
+      description: 可多选。
+      multiple: true
+      options:
+        - protocol
+        - core
+        - render
+        - server
+        - tui
+        - cli
+        - docs
+        - ci
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: 关联 Issue 或 session
+      placeholder: "#12 或 docs/archive/sessions/..."
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 已搜索现有 Issue，确认该缺陷没有重复。
+          required: true
+        - label: 已移除密钥、令牌、个人路径等敏感信息。
+          required: true

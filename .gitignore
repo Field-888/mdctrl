@@ -1,0 +1,11 @@
+/target
+/.mdctrl/
+.DS_Store
+*.log
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Local OpenCode permission configuration
+/opencode.json
