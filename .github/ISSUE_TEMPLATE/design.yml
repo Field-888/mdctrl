@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        设计讨论形成结论后，请写回 `docs/MVPn/design/`，Issue 保留讨论过程。
+        设计讨论形成结论后，写回 `docs/MVPn/design/`，Issue 保留讨论过程。
 
   - type: textarea
     id: problem
@@ -27,16 +27,16 @@ body:
   - type: textarea
     id: options
     attributes:
-      label: 候选方案
-      description: 至少列出两个方案，并说明各自优缺点。
-    validations:
-      required: true
+      label: 候选方案与取舍
+      description: 列出候选方案，说明优缺点、兼容性、性能、维护成本与迁移影响。
+      placeholder: |
+        方案一：
+        - 优点：
+        - 缺点：
 
-  - type: textarea
-    id: tradeoffs
-    attributes:
-      label: 取舍与风险
-      description: 兼容性、性能、维护成本与迁移影响。
+        方案二：
+        - 优点：
+        - 缺点：
     validations:
       required: true
 
@@ -78,7 +78,7 @@ body:
     attributes:
       label: 提交前确认
       options:
-        - label: 已搜索现有 Issue，确认该设计问题没有重复。
+        - label: 已搜索现有 Issue。
           required: true
-        - label: 同意将结论写回 docs/MVPn/design/。
+        - label: 结论将写回 docs/MVPn/design/。
           required: true
