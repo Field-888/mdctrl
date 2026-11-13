@@ -6,41 +6,29 @@ body:
   - type: markdown
     attributes:
       value: |
-        请提供最小复现步骤。安全漏洞请使用私有报告渠道，不要提交公开 Issue。
+        提供最小复现步骤。安全漏洞通过私有报告渠道提交。
 
   - type: textarea
     id: symptom
     attributes:
       label: 现象
-      description: 用一句话描述问题。
+      description: 描述观察到的异常、错误输出或偏离预期的表现。
       placeholder: 例如：表格中的 CJK 文本宽度计算错误
     validations:
       required: true
 
   - type: textarea
-    id: steps
+    id: reproduce
     attributes:
-      label: 复现步骤
-      description: 按顺序列出操作，并附最小输入文件或命令。
+      label: 复现步骤与行为
+      description: 按顺序记录操作步骤，并说明期望行为与实际行为。
       placeholder: |
         1. ...
         2. ...
         3. ...
-    validations:
-      required: true
 
-  - type: textarea
-    id: expected
-    attributes:
-      label: 期望行为
-    validations:
-      required: true
-
-  - type: textarea
-    id: actual
-    attributes:
-      label: 实际行为
-      description: 错误输出、崩溃信息或渲染异常。
+        期望：
+        实际：
     validations:
       required: true
 
@@ -94,7 +82,7 @@ body:
     attributes:
       label: 提交前确认
       options:
-        - label: 已搜索现有 Issue，确认该缺陷没有重复。
+        - label: 已搜索现有 Issue。
           required: true
-        - label: 已移除密钥、令牌、个人路径等敏感信息。
+        - label: 内容已完成脱敏。
           required: true
