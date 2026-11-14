@@ -108,22 +108,23 @@ mdctrl check [paths...] [--rule <id>]... [--severity <level>]
 
 - 范围默认是整个工作区，可传入若干路径；
 - `--rule` 可重复，限制规则集合；
-- `--severity` 过滤展示级别；
-- `--fail-on` 决定发现问题时的退出码阈值；
+- `--severity` 只过滤 `findings` 的展示，不影响 `summary` 与 `--fail-on` 判定；
+- `--fail-on` 基于未过滤的完整结果决定退出码阈值；
+- 检查执行成功但发现问题时，`ok=true`、退出码 5、`error=null`；
 - 详细数据契约见[数据命令](data-commands.md)。
 
 ### 2.8 `index`
 
 ```text
 mdctrl index status [--json]
-mdctrl index update [paths...] [--json]
-mdctrl index rebuild [--json]
+mdctrl index update [paths...] [--json | --json-stream]
+mdctrl index rebuild [--json | --json-stream] [--yes]
 ```
 
 - `status` 报告索引版本、文档数、最近更新时间；
 - `update` 增量更新，未变化文档跳过；
-- `rebuild` 删除并重建索引，要求确认或 `--yes`；
-- 进度事件输出到 stderr，结果输出到 stdout；
+- `rebuild` 保留现有索引，在临时位置全量构建并校验，成功后原子切换；失败时清理临时产物并继续使用旧索引，要求确认或 `--yes`；
+- 默认进度写入 stderr；`--json-stream` 时进度与结果以 NDJSON 写入 stdout；
 - 数据契约见[数据命令](data-commands.md)。
 
 ### 2.9 `mcp`
@@ -175,9 +176,12 @@ mdctrl plugin doctor <name> [--json]
 - 先解析全局选项，再解析命令选项；
 - 路径参数统一解析为工作区相对路径，保留用户输入用于错误信息；
 - 通配符显式展开，展开结果去重；
-- 选项冲突在解析阶段报错，例如 `--json` 与 `open`；
+- 选项冲突在解析阶段报错，例如 `--json` 与 `open`、`--json` 与 `--json-stream`；
+- `--json-stream` 用于不支持流式的命令时返回用法错误（退出码 2）；
 - 破坏性操作要求确认：交互式询问，非 TTY 且无 `--yes` 时报用法错误；
-- 所有路径校验在连接 server 之前完成，避免无效请求。
+- client 在工作区解析阶段做预校验：规范化路径、拒绝越界路径与逃逸符号链接；预校验只为快速失败，不替代 server 的最终校验；
+- server 在执行时重新校验 canonical 路径、符号链接、权限与文件存在性，并处理校验后文件变化（TOCTOU）：读取使用文档版本，写入使用版本检查；
+- 不存在路径仅在创建类操作中允许，读取、搜索与检查默认拒绝。
 
 ## 5 信号与生命周期
 

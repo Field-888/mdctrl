@@ -60,8 +60,8 @@ docs/devPlan.md:88        传输
 ```json
 {
   "schema_version": 1,
-  "command": "check",
-  "ok": false,
+  "command": "status",
+  "ok": true,
   "data": {},
   "error": null,
   "warnings": []
@@ -72,10 +72,12 @@ docs/devPlan.md:88        传输
 | --- | --- | --- |
 | `schema_version` | integer | 结构版本，字段不兼容时递增 |
 | `command` | string | 规范命令名 |
-| `ok` | boolean | 命令是否成功完成 |
+| `ok` | boolean | 命令是否成功执行，不表示检查结论 |
 | `data` | object/array/null | 命令结果 |
 | `error` | object/null | 失败详情 |
 | `warnings` | array | 非阻断提示 |
+
+`ok` 只表示执行是否完成：`check` 发现问题时 `ok=true`、退出码 5、`error=null`，结论放在 `data` 中；`ok=false` 时必有 `error`。
 
 ### 4.2 错误对象
 
@@ -94,11 +96,14 @@ docs/devPlan.md:88        传输
 
 ### 4.3 流式输出
 
-- 长任务使用 NDJSON，每行一个对象；
-- 每行包含 `type` 字段，取值为 `progress`、`item`、`summary`、`error`；
-- 最后一行必须是 `summary` 或 `error`；
+流式输出需要显式 `--json-stream`，默认 `--json` 永远输出单个信封：
+
+- `--json-stream` 仅适用于 `index update` 与 `index rebuild`，其他命令返回用法错误（退出码 2）；
+- stdout 是 NDJSON，每行一个对象，包含 `schema_version`、`command`、`type`、`data`、`error`；
+- `type` 取值为 `progress`、`item`、`summary`、`error`；
+- 最后一行必须是 `summary` 或 `error`，不得省略；
 - 流式输出仍遵守退出码语义；
-- 非流式命令不输出 NDJSON。
+- 未使用 `--json-stream` 时不输出 NDJSON；进度写入 stderr，结果写入 stdout（`--json` 时为单个信封）。
 
 ## 5 字段稳定性
 
@@ -150,7 +155,8 @@ docs/devPlan.md:88        传输
 
 - `--json` 失败时仍输出信封，`ok=false`；
 - 用法错误在解析阶段发生，通常不输出 JSON；
-- 退出码与 `ok` 字段保持一致：`ok=true` 时退出码为 0 或 5；
+- `ok=true` 对应退出码 0 或 5；`ok=false` 对应 1、2、3、4 或 130；
+- `check` 的检查结论只放在 `data`，不通过 `ok` 或 `error` 表达；
 - CI 依据退出码分支，不解析人类可读文本。
 
 ## 9 CI 与诊断

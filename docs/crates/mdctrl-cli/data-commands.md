@@ -38,6 +38,7 @@ mdctrl check [paths...] [选项]
 
 - 范围为整个工作区；
 - 展示所有级别；
+- `--severity` 只影响 `findings` 展示，`summary` 与 `--fail-on` 使用完整结果；
 - `--fail-on warning`；
 - 人类可读输出，非 TTY 时无色。
 
@@ -50,7 +51,7 @@ mdctrl check [paths...] [选项]
 | `orphan` | info | 没有入链且不在索引入口的文档 |
 | `stale` | warning | 超过配置的观察或复核周期 |
 
-规则 id 稳定，新增规则不改变既有 id。规则参数（例如过期天数）来自 `mdctrl.toml`，不在命令行重复定义。
+规则 id 稳定，新增规则不改变既有 id。规则参数（例如过期天数）来自 `mdctrl.toml`，不在命令行重复定义。规则 id 与结果字段是候选契约，需 `ylgd0915` 确认后固化；当前 `mdctrl-protocol` 尚未实现。
 
 ### 2.3 结果模型
 
@@ -58,12 +59,14 @@ mdctrl check [paths...] [选项]
 {
   "schema_version": 1,
   "command": "check",
-  "ok": false,
+  "ok": true,
   "data": {
     "scope": { "paths": ["docs"], "rules": null },
+    "filtered": false,
     "summary": {
       "documents": 42,
       "findings": 3,
+      "truncated": true,
       "by_severity": { "error": 1, "warning": 2, "info": 0 },
       "by_rule": { "broken-link": 1, "missing-metadata": 2 }
     },
@@ -87,12 +90,14 @@ mdctrl check [paths...] [选项]
 
 字段规则：
 
+- `ok` 表示检查成功执行，不表示是否存在问题；发现问题时 `ok=true`、退出码 5；
 - `findings` 按严重度降序、路径与行号升序排列；
+- `findings` 受 `--severity` 过滤，`filtered` 标记是否发生过滤；
 - `path` 为工作区相对路径；
 - `line`、`column` 从 1 开始，未知时为 `null`；
 - `target` 仅链接类规则使用；
 - `related` 保存相关文档或锚点，供跳转与详情使用；
-- `summary` 始终包含完整计数，即使输出被截断。
+- `summary` 始终包含未过滤的完整计数，即使 `findings` 被过滤或截断；`summary.truncated` 标记是否截断。
 
 ### 2.4 退出码
 
@@ -130,15 +135,15 @@ warning docs/devPlan.md:42        stale
 
 ```text
 mdctrl index status [--json]
-mdctrl index update [paths...] [--json]
-mdctrl index rebuild [--json] [--yes]
+mdctrl index update [paths...] [--json | --json-stream]
+mdctrl index rebuild [--json | --json-stream] [--yes]
 ```
 
 | 子命令 | 行为 | 是否修改索引 |
 | --- | --- | --- |
 | `status` | 报告索引元数据 | 否 |
 | `update` | 增量更新，未变化文档跳过 | 是 |
-| `rebuild` | 删除并重建 | 是 |
+| `rebuild` | 保留旧索引，临时构建后原子替换 | 是 |
 
 ### 3.2 状态模型
 
@@ -173,26 +178,29 @@ mdctrl index rebuild [--json] [--yes]
 ### 3.3 更新与重建
 
 - `update` 只处理自上次索引后变化的文档；
-- `rebuild` 删除索引文件后全量构建，要求确认或 `--yes`；
-- 构建过程写入临时文件，完成后原子替换；
-- 构建失败保留旧索引，`last_error` 记录原因；
-- 并发更新由工作区锁串行化，第二个调用等待或返回“已有构建”（退出码 4）。
+- `rebuild` 保留现有索引，在独立临时位置全量构建并校验，成功后原子切换；
+- 构建失败时清理临时产物，继续使用旧索引，`last_error` 记录原因；
+- 旧索引在切换成功前始终可读，构建期间读取方不会看到半成品；
+- 并发更新由工作区锁串行化：默认非阻塞，第二个调用立即返回“已有构建”（退出码 4，`kind=index_busy`），不排队等待。
 
-### 3.4 进度流
+### 3.4 进度与流式输出
 
-`--json` 时使用 NDJSON：
+默认（人类可读或 `--json`）：进度写入 stderr，可被 `--quiet` 抑制；stdout 只输出最终结果信封。
+
+`--json-stream` 时 stdout 使用 NDJSON：
 
 ```json
-{"type":"progress","phase":"scan","done":12,"total":42}
-{"type":"progress","phase":"index","done":30,"total":42}
-{"type":"summary","data":{"updated":30,"skipped":12,"errors":0}}
+{"schema_version":1,"command":"index.update","type":"progress","phase":"scan","done":12,"total":42,"data":null,"error":null}
+{"schema_version":1,"command":"index.update","type":"progress","phase":"index","done":30,"total":42,"data":null,"error":null}
+{"schema_version":1,"command":"index.update","type":"summary","data":{"updated":30,"skipped":12,"errors":0},"error":null}
 ```
 
 规则：
 
-- 进度写入 stdout 的 NDJSON 流；
-- 人类可读模式进度写入 stderr，可被 `--quiet` 抑制；
+- `--json-stream` 仅适用于 `index update` 与 `index rebuild`；
+- 每行包含 `schema_version`、`command`、`type`、`data`、`error`；
 - 最后一行必须是 `summary` 或 `error`；
+- 未使用 `--json-stream` 时不输出 NDJSON，`--json` 始终是单个信封；
 - 进度不改变退出码。
 
 ### 3.5 退出码

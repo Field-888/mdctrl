@@ -46,7 +46,8 @@ mdctrl [全局选项] <命令> [参数]
 | 选项 | 作用 | 默认 |
 | --- | --- | --- |
 | `--workspace <dir>` | 指定工作区根目录 | 从当前目录向上查找 |
-| `--json` | 输出结构化 JSON | 关闭 |
+| `--json` | 输出单个结构化结果信封 | 关闭 |
+| `--json-stream` | 输出 NDJSON 流，仅用于 `index update` / `index rebuild` | 关闭 |
 | `--no-color` | 禁用颜色 | 自动检测 |
 | `--quiet` | 抑制进度与提示 | 关闭 |
 | `--verbose` | 输出调试信息到 stderr | 关闭 |

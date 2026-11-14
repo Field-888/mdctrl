@@ -4,6 +4,8 @@
 
 > 三个界面共享一套会话模型：先得到候选集合，再选中，再跳转；数据始终来自 server。
 
+> 阶段边界：文件名查找、全文搜索与跳转属于 MVP1；健康面板与反链展示属于 MVP2，MVP1 只保留入口占位。
+
 **相关文档**：[mdctrl-tui](README.md) · [视图状态](view-state.md) · [事件循环](event-loop.md) · [mdctrl-cli](../mdctrl-cli/README.md)
 
 ## 1 职责划分

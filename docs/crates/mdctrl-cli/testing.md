@@ -4,6 +4,8 @@
 
 > CLI 的契约是参数、输出与退出码：三者都必须被测试固定下来。
 
+> 本文是 MVP0 的测试计划；对应功能与测试在后续 MVP 实现，不在本次文档任务范围内。
+
 **相关文档**：[mdctrl-cli](README.md) · [命令组合](commands.md) · [输出](output.md) · [贡献指南](../../../CONTRIBUTING.md#5-本地检查)
 
 ## 1 测试层次
@@ -69,7 +71,8 @@ Command::cargo_bin("mdctrl")
 ## 6 不变量测试
 
 - 同一输入在 TTY 与非 TTY 下退出码一致；
-- `--json` 时 stdout 可被 JSON 解析器完整解析；
+- `--json` 时 stdout 是单个完整 JSON 文档；
+- `--json-stream` 时每行都是完整 JSON，最后一行是 `summary` 或 `error`；
 - `--quiet` 不改变退出码与结果字段；
 - `--no-color` 不改变文本内容；
 - 未知命令始终返回 2；
