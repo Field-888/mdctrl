@@ -16,8 +16,9 @@
 
 规则：
 
-- stdout 只放结果，不放进度与日志；
-- `--json` 时 stdout 是单个 JSON 文档或 NDJSON 流，不混入其他文本；
+- stdout 只放结果；`--json-stream` 时结构化进度属于结果流，其余模式进度写入 stderr；
+- `--json` 时 stdout 是单个信封，`--json-stream` 时是 NDJSON 流，均不混入其他文本；
+- 默认人类可读模式 stdout 只放人类可读结果，不混入 JSON 或日志；
 - stderr 不使用颜色以外的控制序列；
 - 管道断开（SIGPIPE）时停止写入并正常退出；
 - 输出内容不包含密钥、令牌、私有地址与个人路径。
@@ -77,7 +78,7 @@ docs/devPlan.md:88        传输
 | `error` | object/null | 失败详情 |
 | `warnings` | array | 非阻断提示 |
 
-`ok` 只表示执行是否完成：`check` 发现问题时 `ok=true`、退出码 5、`error=null`，结论放在 `data` 中；`ok=false` 时必有 `error`。
+`ok` 只表示执行是否完成：`check` 执行成功时 `ok=true`、`error=null`；达到 `--fail-on` 阈值返回 5，否则返回 0。检查结论放在 `data` 中；`ok=false` 时必有 `error`。
 
 ### 4.2 错误对象
 
@@ -148,7 +149,7 @@ docs/devPlan.md:88        传输
 | 2 | 用法错误 | 空 |
 | 3 | 工作区错误 | 空 |
 | 4 | 数据不可用 | 空或状态对象 |
-| 5 | `check` 发现问题 | 完整体检结果 |
+| 5 | `check` 达到 `--fail-on` 阈值 | 完整体检结果 |
 | 130 | 被中断 | 可能部分结果 |
 
 规则：

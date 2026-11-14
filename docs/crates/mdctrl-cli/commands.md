@@ -110,7 +110,7 @@ mdctrl check [paths...] [--rule <id>]... [--severity <level>]
 - `--rule` 可重复，限制规则集合；
 - `--severity` 只过滤 `findings` 的展示，不影响 `summary` 与 `--fail-on` 判定；
 - `--fail-on` 基于未过滤的完整结果决定退出码阈值；
-- 检查执行成功但发现问题时，`ok=true`、退出码 5、`error=null`；
+- 执行成功时 `ok=true`、`error=null`；达到 `--fail-on` 阈值返回 5，否则返回 0；
 - 详细数据契约见[数据命令](data-commands.md)。
 
 ### 2.8 `index`
@@ -180,7 +180,9 @@ mdctrl plugin doctor <name> [--json]
 - `--json-stream` 用于不支持流式的命令时返回用法错误（退出码 2）；
 - 破坏性操作要求确认：交互式询问，非 TTY 且无 `--yes` 时报用法错误；
 - client 在工作区解析阶段做预校验：规范化路径、拒绝越界路径与逃逸符号链接；预校验只为快速失败，不替代 server 的最终校验；
-- server 在执行时重新校验 canonical 路径、符号链接、权限与文件存在性，并处理校验后文件变化（TOCTOU）：读取使用文档版本，写入使用版本检查；
+- server 在执行时重新校验 canonical 路径、符号链接、权限与文件存在性；
+- 实际读写时 server 再次确认目标仍位于工作区边界内；校验后符号链接被替换也不得逃逸工作区；
+- 文档版本检查负责内容冲突（TOCTOU 的内容一致性），不替代路径边界校验；具体文件访问机制由 server 文档承接；
 - 不存在路径仅在创建类操作中允许，读取、搜索与检查默认拒绝。
 
 ## 5 信号与生命周期
@@ -214,7 +216,7 @@ mdctrl index status
 mdctrl index update
 mdctrl open docs/architecture.md
 
-# CI 健康检查，发现问题返回 5
+# CI 健康检查，达到阈值返回 5
 mdctrl check --json --fail-on warning
 
 # 脚本消费搜索结果

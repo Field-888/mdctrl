@@ -31,7 +31,7 @@ mdctrl check [paths...] [选项]
   --fail-on <level>    达到该级别时退出码为 5：error | warning | info | never
   --json               结构化输出
   --no-color           禁用颜色
-  --quiet              仅输出摘要
+  --quiet              人类可读模式仅输出摘要；结构化模式保留完整字段
 ```
 
 默认：
@@ -90,7 +90,7 @@ mdctrl check [paths...] [选项]
 
 字段规则：
 
-- `ok` 表示检查成功执行，不表示是否存在问题；发现问题时 `ok=true`、退出码 5；
+- `ok` 表示检查成功执行，不表示是否存在问题；执行成功时 `ok=true`、`error=null`；达到 `--fail-on` 阈值返回 5，否则返回 0；
 - `findings` 按严重度降序、路径与行号升序排列；
 - `findings` 受 `--severity` 过滤，`filtered` 标记是否发生过滤；
 - `path` 为工作区相对路径；
@@ -126,7 +126,7 @@ warning docs/devPlan.md:42        stale
 
 - 每个问题两行：位置摘要与消息；
 - 末尾输出汇总；
-- `--quiet` 只输出汇总；
+- `--quiet` 在人类可读模式下只输出汇总；结构化模式保留完整字段；
 - 无问题时输出“未发现问题”与检查范围。
 
 ## 3 `index`
@@ -181,11 +181,12 @@ mdctrl index rebuild [--json | --json-stream] [--yes]
 - `rebuild` 保留现有索引，在独立临时位置全量构建并校验，成功后原子切换；
 - 构建失败时清理临时产物，继续使用旧索引，`last_error` 记录原因；
 - 旧索引在切换成功前始终可读，构建期间读取方不会看到半成品；
-- 并发更新由工作区锁串行化：默认非阻塞，第二个调用立即返回“已有构建”（退出码 4，`kind=index_busy`），不排队等待。
+- 并发更新由 server 内部索引任务状态串行化：默认非阻塞，第二个请求在任务进行中立即返回“已有构建”（退出码 4，`kind=index_busy`），不排队等待；
+- `.mdctrl/lock` 只保证每个工作区一个 server，daemon 运行期间持续持有，不用于索引任务互斥；embedded 与 daemon 均由 server 内部任务状态判断冲突。
 
 ### 3.4 进度与流式输出
 
-默认（人类可读或 `--json`）：进度写入 stderr，可被 `--quiet` 抑制；stdout 只输出最终结果信封。
+默认：人类可读模式在 stdout 输出可读结果，`--json` 在 stdout 输出单个信封；进度写入 stderr，可被 `--quiet` 抑制。
 
 `--json-stream` 时 stdout 使用 NDJSON：
 
