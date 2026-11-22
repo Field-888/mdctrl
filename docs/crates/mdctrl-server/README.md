@@ -1,6 +1,6 @@
 # mdctrl-server 技术文档
 
-> 文档状态：草案 · 最后复核：2026-11-14
+> 文档状态：草案 · 最后复核：2026-11-22
 
 > server 是 mdctrl 唯一的文档状态所有者：它装配 kernel、services、hosts 与 transport，把工作区变化转换成事件与视图。
 
@@ -130,7 +130,7 @@ flowchart TB
 装配顺序（`建议`）：
 
 1. workspace：识别根目录、加载配置、获取锁（失败即终止，不初始化其他模块）；
-2. history：打开历史库，检查 schema；
+2. history：打开历史库，检查 schema，恢复未完成意图并识别待保留的证据（§8.3）；
 3. kernel：创建总线与注册表；
 4. 状态层与写入路径注册到 kernel；
 5. services 注册：render 适配、index、health、git、media；
@@ -238,7 +238,7 @@ index、health、git、media、plugin、agent、MCP 先作为 server 内部模�
 | 流程 | 主线 | 详见 |
 | --- | --- | --- |
 | 打开并阅读 | client `open(path, viewport, caps)` → 路径校验 → 读取快照 → 记录观察 → render 布局 → 组合 View（媒体占位）→ client 栅格化 | [架构 13.1](../../architecture.md#131-打开并阅读文档)、[media.md](media.md#3-处理流程) |
-| 文件变化刷新 | 监听 → 去抖 → 读取与指纹 → 历史 → 索引 → 健康失效 → 事件 → client 重新请求 View | [index.md](index.md#4-增量更新与刷新流程) |
+| 文件变化刷新 | 监听 → workspace 确认新快照 → 尝试记录历史 → 通知阅读会话并更新索引 → 健康结果失效；历史拒写时提示滞后 | [index.md](index.md#4-增量更新与刷新流程) |
 | 编辑与写入 | 提案 → diff → 审批 → 版本检查 → 原子写入 → 历史与溯源 → 广播 | [write-path.md](write-path.md) |
 | 搜索 | query → index → 结果（含索引版本与截断标记） | [index.md](index.md#5-查询) |
 | 体检 | `check` / 健康面板 → health 读取链接图、元数据、历史 → 结果 | [health.md](health.md) |
@@ -266,6 +266,7 @@ sequenceDiagram
     B-->>C: 返回持有者信息（连接 daemon 或报错）
   end
   B->>H: 打开历史库、检查 schema
+  B->>H: 识别未完成意图与待核对证据，再清理已确认的残留
   B->>K: 创建 kernel，注册 services 与 hosts
   B->>T: 建立通道 / 开始监听
   T-->>C: 握手完成，server 可服务
@@ -314,10 +315,9 @@ sequenceDiagram
 
 进程崩溃或被终止时，操作系统释放文件锁（`fd-lock` 基于操作系统文件锁，见 [workspace.md](workspace.md#6-锁与单写入者)）。下次启动时：
 
-- 清理 `.mdctrl/cache/tmp/` 中属于已终止实例的半成品（索引重建临时库、媒体临时文件）。建议每个 server 实例使用独立的临时子目录（如以实例标识命名），避免与可能残留的旧子进程输出相互覆盖；
-- 工作区内同目录残留的原子写临时文件按命名规则识别并清理（见 [write-path.md](write-path.md#7-原子写入)）；
-- SQLite 自身的日志恢复保证事务一致；
-- 历史对账把崩溃期间的文件变化记为“启动对账”来源，未完成的写入意图按 [history.md](history.md#4-更新流程) 归因、放弃或标记为待核对。
+1. 获取工作区锁并打开历史库，完成 SQLite 事务恢复。加载未完成及待核对的意图，先标识它们关联的临时文件和证据，再按[历史对账规则](history.md#4-更新流程)核对目标。已经进入待核对状态的证据保留到人工核对结束。
+2. 只清理能确认属于已终止实例、且与未决意图无关的临时文件，包括同目录的写入残留、索引临时库与媒体半成品。文件名前缀不足以证明归属；意图库无法读取、刚因损坏重建或归属不明时，保留可疑文件并报告。
+3. 完成工作区扫描，将其余外部变化按启动对账来源记录。历史库保存证据的位置和指纹，原文件由写入路径管理。
 
 ### 8.4 验证场景
 
@@ -328,7 +328,7 @@ sequenceDiagram
 | 阻塞状态下终止持锁进程 | 锁被操作系统释放；重启后按 §8.3 恢复，文档为旧内容或新内容之一 |
 | 任务忽略取消请求 | 不被视为已停止；属于写入类时阻止释放锁 |
 | 插件与媒体子进程在关闭时仍在运行 | 进程树被终止并回收后才释放锁；残留输出不进入新实例的临时目录 |
-| 提交阶段中途终止进程（故障注入） | 临时文件被清理；写入意图被正确归因或标记待核对 |
+| 提交阶段中途终止进程（故障注入） | 重启后意图按指纹对账；待人工核对的证据仍可访问，只清理已确认无关联的残留 |
 
 ## 9 错误模型
 
@@ -340,7 +340,7 @@ sequenceDiagram
 | `workspace_locked` | 锁被 embedded 实例持有 | 3（待定，WS-3） |
 | `config_invalid` | `mdctrl.toml` 或本地配置无效 | 3 |
 | `schema_unsupported` | 本地 schema 比程序新 | 3 |
-| `path_rejected` | 路径越界或非法 | 2 或 1（待定） |
+| `path_rejected` | 请求的文档位于工作区边界之外 | 建议 3，与 PR #5 对齐。参数语法错误由 CLI 返回 2；合法路径上的运行时 I/O 失败返回 1（待双方确认） |
 | `document_not_found` | 文档不存在 | 1 |
 | `version_conflict` | 写入时版本不匹配 | 1 |
 | `index_unavailable` / `index_busy` | 索引缺失、损坏或正在构建 | 4 |
