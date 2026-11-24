@@ -1,6 +1,6 @@
 # 数据命令
 
-> 文档状态：草案 · 最后复核：2026-11-14
+> 文档状态：草案 · 最后复核：2026-11-24
 
 > `check` 与 `index` 是 CI 的主要接口：规则与索引由 server 拥有，CLI 只定义调用与输出契约。
 
@@ -29,6 +29,7 @@ mdctrl check [paths...] [选项]
   --rule <id>          限制规则，可重复
   --severity <level>   最低展示级别：error | warning | info
   --fail-on <level>    达到该级别时退出码为 5：error | warning | info | never
+  --allow-partial      允许不完整检查按成功结束；默认不完整返回 4
   --json               结构化输出
   --no-color           禁用颜色
   --quiet              人类可读模式仅输出摘要；结构化模式保留完整字段
@@ -40,6 +41,7 @@ mdctrl check [paths...] [选项]
 - 展示所有级别；
 - `--severity` 只影响 `findings` 展示，`summary` 与 `--fail-on` 使用完整结果；
 - `--fail-on warning`；
+- 检查覆盖不完整时默认返回 4，保留已检查部分的结果；`--allow-partial` 允许按成功结束，并在 `coverage.complete=false` 中标记；
 - 人类可读输出，非 TTY 时无色。
 
 ### 2.2 规则集合
@@ -62,6 +64,11 @@ mdctrl check [paths...] [选项]
   "ok": true,
   "data": {
     "scope": { "paths": ["docs"], "rules": null },
+    "coverage": {
+      "complete": true,
+      "checked_documents": 42,
+      "unchecked": []
+    },
     "filtered": false,
     "summary": {
       "documents": 42,
@@ -90,14 +97,17 @@ mdctrl check [paths...] [选项]
 
 字段规则：
 
-- `ok` 表示检查成功执行，不表示是否存在问题；执行成功时 `ok=true`、`error=null`；达到 `--fail-on` 阈值返回 5，否则返回 0；
+- `ok` 表示检查成功执行，不表示是否存在问题；执行成功且覆盖完整时 `ok=true`、`error=null`；达到 `--fail-on` 阈值返回 5，否则返回 0；
+- 检查覆盖不完整时默认 `ok=false`、`error.kind=check_incomplete`、退出码 4，`data` 仍保留已检查部分的结果；使用 `--allow-partial` 时 `ok=true`，退出码按发现问题的严重度取 0 或 5，`coverage.complete=false`；
+- `coverage.complete` 表示本次检查是否覆盖了请求范围；目录无法枚举、文档无法读取或规则无法判定时为 `false`；
+- `coverage.unchecked` 列出未检查的路径、规则与原因，例如 `{ "path": "docs/private", "rule": null, "reason": "permission_denied" }`；未知目录中的文档数保持未知，不计入 `summary.documents`；
 - `findings` 按严重度降序、路径与行号升序排列；
 - `findings` 受 `--severity` 过滤，`filtered` 标记是否发生过滤；
 - `path` 为工作区相对路径；
 - `line`、`column` 从 1 开始，未知时为 `null`；
 - `target` 仅链接类规则使用；
 - `related` 保存相关文档或锚点，供跳转与详情使用；
-- `summary` 始终包含未过滤的完整计数，即使 `findings` 被过滤或截断；`summary.truncated` 标记是否截断。
+- `summary` 只统计已检查文档，始终包含未过滤的完整计数；展示过滤不会改变计数；`summary.truncated` 只表示问题列表被截断，不表示检查覆盖不完整。
 
 ### 2.4 退出码
 
@@ -107,9 +117,10 @@ mdctrl check [paths...] [选项]
 | 达到 `--fail-on` 阈值 | 5 |
 | 执行失败 | 1 |
 | 工作区或配置错误 | 3 |
+| 检查覆盖不完整（默认） | 4 |
 | 索引或数据不可用 | 4 |
 
-`--fail-on never` 始终返回 0（执行成功时），用于只生成报告的流水线。
+`--fail-on never` 只关闭发现问题的严重度阈值；检查覆盖不完整时仍默认返回 4，除非使用 `--allow-partial`。
 
 ### 2.5 人类可读输出
 
@@ -125,9 +136,11 @@ warning docs/devPlan.md:42        stale
 规则：
 
 - 每个问题两行：位置摘要与消息；
-- 末尾输出汇总；
+- 末尾输出汇总，并说明已检查文档数和未检查范围；
 - `--quiet` 在人类可读模式下只输出汇总；结构化模式保留完整字段；
-- 无问题时输出“未发现问题”与检查范围。
+- 只有完整检查且无发现时输出“未发现问题”；
+- 过滤后无结果时输出“当前筛选无结果”，同时保留完整汇总；
+- 覆盖不完整时输出“检查未完成”与未检查范围，不能显示“未发现问题”。
 
 ## 3 `index`
 
@@ -154,10 +167,10 @@ mdctrl index rebuild [--json | --json-stream] [--yes]
   "ok": true,
   "data": {
     "state": "ready",
+    "task": "none",
     "documents": 42,
     "index_version": 3,
-    "updated_at": "2026-11-14T08:30:00Z",
-    "stale": false,
+    "updated_at": "2026-11-24T08:30:00Z",
     "last_error": null
   },
   "error": null,
@@ -165,15 +178,27 @@ mdctrl index rebuild [--json | --json-stream] [--yes]
 }
 ```
 
-`state` 取值：
+`state` 表示当前可读索引的状态，`task` 表示进行中的任务：
 
-| 值 | 含义 |
-| --- | --- |
-| `missing` | 尚未建立索引 |
-| `building` | 正在构建 |
-| `ready` | 可用 |
-| `stale` | 工作区变化，需要更新 |
-| `error` | 构建失败，需查看 `last_error` |
+| 字段 | 取值 | 含义 |
+| --- | --- | --- |
+| `state` | `missing` | 没有可用索引 |
+| `state` | `ready` | 有可用索引 |
+| `state` | `stale` | 可用索引落后于工作区 |
+| `state` | `error` | 没有可用索引，且最近一次构建失败 |
+| `task` | `none` | 没有进行中的索引任务 |
+| `task` | `building` | 首次构建 |
+| `task` | `rebuilding` | 保留旧索引的全量重建 |
+| `task` | `updating` | 增量更新 |
+
+状态组合示例：
+
+| 场景 | `state` | `task` | 查询行为 |
+| --- | --- | --- | --- |
+| 首次构建 | `missing` | `building` | 返回 `index_unavailable`；文件名查找仍可用 |
+| 带旧库重建 | `ready` | `rebuilding` | 查询读取旧版本并标记索引滞后 |
+| 重建失败且旧库可用 | `ready` | `none` | 继续使用旧索引，`last_error` 记录原因 |
+| 重建失败且无旧库 | `error` | `none` | 全文搜索不可用；文件名查找仍可用 |
 
 ### 3.3 更新与重建
 

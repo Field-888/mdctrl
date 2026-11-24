@@ -1,6 +1,6 @@
 # 命令组合
 
-> 文档状态：草案 · 最后复核：2026-11-14
+> 文档状态：草案 · 最后复核：2026-11-24
 
 > 每条命令都是“解析 → 校验 → 连接 → 请求 → 输出”的固定管线，组合规则保持可预测。
 
@@ -30,14 +30,14 @@ mdctrl [全局选项] <命令> [命令选项] [位置参数...]
 ### 2.1 `init`
 
 ```text
-mdctrl init [--force]
+mdctrl init
 ```
 
 - 解析或创建工作区根目录；
 - 创建 `.mdctrl` 及其子目录；
 - 确保 `.mdctrl/` 被忽略；
 - 写入 `mdctrl.toml` 与本地 schema 版本；
-- 幂等：已初始化时不覆盖共享配置，除非显式 `--force`；
+- 幂等：重复初始化只补充缺失目录与本地状态；已有 `mdctrl.toml` 保留原文件，不提供覆盖共享配置的选项；
 - 输出创建项与跳过项。
 
 ### 2.2 `open`
@@ -103,14 +103,15 @@ mdctrl serve [--foreground]
 
 ```text
 mdctrl check [paths...] [--rule <id>]... [--severity <level>]
-             [--fail-on <level>] [--json]
+             [--fail-on <level>] [--allow-partial] [--json]
 ```
 
 - 范围默认是整个工作区，可传入若干路径；
 - `--rule` 可重复，限制规则集合；
 - `--severity` 只过滤 `findings` 的展示，不影响 `summary` 与 `--fail-on` 判定；
 - `--fail-on` 基于未过滤的完整结果决定退出码阈值；
-- 执行成功时 `ok=true`、`error=null`；达到 `--fail-on` 阈值返回 5，否则返回 0；
+- 覆盖不完整时默认返回 4，保留已检查部分的结果；`--allow-partial` 允许按成功结束；
+- 执行成功且覆盖完整时 `ok=true`、`error=null`；达到 `--fail-on` 阈值返回 5，否则返回 0；
 - 详细数据契约见[数据命令](data-commands.md)。
 
 ### 2.8 `index`
@@ -121,7 +122,7 @@ mdctrl index update [paths...] [--json | --json-stream]
 mdctrl index rebuild [--json | --json-stream] [--yes]
 ```
 
-- `status` 报告索引版本、文档数、最近更新时间；
+- `status` 报告可读索引状态、进行中的任务、索引版本、文档数与最近更新时间；
 - `update` 增量更新，未变化文档跳过；
 - `rebuild` 保留现有索引，在临时位置全量构建并校验，成功后原子切换；失败时清理临时产物并继续使用旧索引，要求确认或 `--yes`；
 - 默认进度写入 stderr；`--json-stream` 时进度与结果以 NDJSON 写入 stdout；
@@ -156,7 +157,7 @@ mdctrl plugin doctor <name> [--json]
 
 | 命令 | 协议类型 | 主要字段 |
 | --- | --- | --- |
-| `init` | command | workspace root、force |
+| `init` | command | workspace root |
 | `open` | command + query | path、viewport、capabilities |
 | `search` | query | query、limit、path filter |
 | `find` | query | pattern、limit |

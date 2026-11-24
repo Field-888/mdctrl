@@ -1,6 +1,6 @@
 # 输出
 
-> 文档状态：草案 · 最后复核：2026-11-14
+> 文档状态：草案 · 最后复核：2026-11-24
 
 > 人类读 stdout，脚本读 JSON，诊断读 stderr：三者互不污染。
 
@@ -78,7 +78,7 @@ docs/devPlan.md:88        传输
 | `error` | object/null | 失败详情 |
 | `warnings` | array | 非阻断提示 |
 
-`ok` 只表示执行是否完成：`check` 执行成功时 `ok=true`、`error=null`；达到 `--fail-on` 阈值返回 5，否则返回 0。检查结论放在 `data` 中；`ok=false` 时必有 `error`。
+`ok` 只表示执行是否完成：`check` 执行成功且覆盖完整时 `ok=true`、`error=null`；达到 `--fail-on` 阈值返回 5，否则返回 0。检查覆盖不完整时默认 `ok=false`、`error.kind=check_incomplete`、退出码 4，`data` 仍可携带已检查部分；使用 `--allow-partial` 时 `ok=true`，退出码按发现问题的严重度取 0 或 5，并在 `data.coverage.complete=false` 标记。检查结论放在 `data` 中；`ok=false` 时必有 `error`。
 
 ### 4.2 错误对象
 
@@ -148,13 +148,13 @@ docs/devPlan.md:88        传输
 | 1 | 运行时失败 | 空或部分结果 |
 | 2 | 用法错误 | 空 |
 | 3 | 工作区错误 | 空 |
-| 4 | 数据不可用 | 空或状态对象 |
+| 4 | 数据不可用或检查不完整 | 部分结果或状态对象 |
 | 5 | `check` 达到 `--fail-on` 阈值 | 完整体检结果 |
 | 130 | 被中断 | 可能部分结果 |
 
 规则：
 
-- `--json` 失败时仍输出信封，`ok=false`；
+- `--json` 失败时仍输出信封，`ok=false`；失败信封可以携带部分 `data`（如不完整检查的已检查结果）；
 - 用法错误在解析阶段发生，通常不输出 JSON；
 - `ok=true` 对应退出码 0 或 5；`ok=false` 对应 1、2、3、4 或 130；
 - `check` 的检查结论只放在 `data`，不通过 `ok` 或 `error` 表达；
