@@ -117,13 +117,12 @@ DocumentListReply {
 DocumentViewRequest {
   path,
   viewport,
-  width,
   version?,
   theme_mode?
 }
 ```
 
-- `viewport` 指 server 生成的布局行范围与高度；`width` 以终端 Cell 为单位。
+- `viewport` 使用 base 的 `Viewport`，包含布局行起点、高度与终端宽度；宽度以 Cell 为单位。
 - `version` 省略时按 latest 返回；携带时按 exact 匹配。
 - `theme_mode` 影响媒体资源与主题相关布局。
 
