@@ -1,6 +1,6 @@
 # mdctrl-protocol 视图
 
-> 文档状态：草案 · 最后复核：2026-11-25
+> 文档状态：草案 · 最后复核：2026-11-26
 
 > view 定义 document.view 的 View 载荷、行模型、样式 token、媒体占位与诊断。
 
@@ -118,11 +118,14 @@ MediaFallback {
 }
 ```
 
+- `MediaDescriptor.id` 是 media 域的 `ResourceId`，标识媒体产物；源内容、主题或目标尺寸变化时产生新的 ID。
 - 资源就绪前使用 `reserved` 占位；就绪后 `actual` 用于缩放或替换，媒体区域保持原布局。
 - 默认使用固定占位，媒体就绪时在预留区域替换。
 - 资源失败时显示 `fallback` 的文本或源码。
-- `media.ready` 事件到达后，client 按 `id` 替换对应区域；需要重新布局时由 server 发送新的 View。
-- 大资源通过 `ResourceId` 与媒体读取原语获取，View 载荷保持轻量。
+- `media.ready` 事件到达后，client 按 `resource_id` 匹配当前 View；命中时替换对应区域，未命中时重新请求 View。`media.failed` 到达后使用 `fallback`；资源 ID 未知时重新请求 View。
+- `media.ready` 与 `media.failed` 携带 `document_version`；client 丢弃与当前 View 不一致的事件。
+- 需要重新布局时由 server 发送新的 View。
+- 大资源通过 `ResourceId` 与 `media.read` 获取，View 载荷保持轻量。
 
 ## 6 诊断
 
@@ -152,7 +155,7 @@ View 的有效性由三个条件决定：
 失效来源：
 
 - `document.changed`：文档内容或状态变化，重新请求 View；
-- `media.ready`：替换媒体区域，必要时重新请求；
+- `media.ready` / `media.failed`：按 `resource_id` 更新媒体区域，必要时重新请求；
 - `index.updated` / `health.updated`：行内诊断或链接结果变化，重新请求；
 - 终端宽度或主题模式变化：client 重新请求；
 - client 丢弃 `generation` 或 `viewport` 与请求不同的过期响应。
@@ -165,7 +168,8 @@ View 失效由上游事件触发，client 按需重新查询。
 | --- | --- |
 | document | `document.view` 是入口；提供文档版本、链接与观察语义 |
 | render | 生成布局行、断行、缩进与显示宽度 |
-| media | 提供媒体资源、占位、就绪事件与降级内容 |
+| media | 提供媒体资源、`media.read`、就绪/失败事件与降级内容 |
+| plugin | 插件命令返回 `PluginView`；client 在插件面板显示，文档 View 保持文档专属 |
 | index | 提供链接解析结果与行内诊断输入 |
 | health | 提供 workspace findings；View 承载当前视口的行内诊断 |
 | client | 消费 View、映射样式 token、栅格化 Cell、缓存视口 |

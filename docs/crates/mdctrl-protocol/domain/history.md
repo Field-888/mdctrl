@@ -1,12 +1,12 @@
 # mdctrl-protocol 文档历史
 
-> 文档状态：草案 · 最后复核：2026-11-25
+> 文档状态：草案 · 最后复核：2026-11-26
 
-> history 记录文档观察、内容与状态变化、身份关联与写入溯源。
+> history 记录文档观察、内容与状态变化、身份关联、写入与撤销溯源。
 
 ## 1 定位
 
-history 是基础状态域，负责记录 server 对文档的观察、内容与状态变化、身份关联与写入溯源。每个 `DocumentPath` 维护一颗 `DocHistoryTree`；节点组成有向无环图，默认视图呈现 Active 节点，Audit 视图保留完整观察记录。
+history 是基础状态域，负责记录 server 对文档的观察、内容与状态变化、身份关联、写入与撤销溯源。每个 `DocumentPath` 维护一颗 `DocHistoryTree`；节点组成有向无环图，默认视图呈现 Active 节点，Audit 视图保留完整观察记录。
 
 history 使用 [base.md](../base.md) 的 `DocumentPath`、`DocumentVersion`、`Timestamp`、`PageRequest` 与 `PageInfo`。文档查看、写入与健康分别由 document、write 与 health 提供。
 
@@ -20,7 +20,7 @@ history 使用 [base.md](../base.md) 的 `DocumentPath`、`DocumentVersion`、`T
 | `history.tree` | `Read` | `Unary` | 返回文档 DAG 窗口与 refs | `workspace.read` |
 | `history.node` | `Read` | `Unary` | 返回节点详情与 changes | `workspace.read` |
 | `history.changes` | `Read` | `Unary` | 返回文档或工作区的 change 列表 | `workspace.read` |
-| `history.provenance` | `Read` | `Unary` | 返回单次写入的溯源详情 | `workspace.read` |
+| `history.provenance` | `Read` | `Unary` | 返回单次写入或撤销的溯源详情 | `workspace.read` |
 
 服务原语保持只读，按 `workspace.read` 能力授权。查询形状在第 6 节定义，溯源形状在第 7 节定义。
 
@@ -119,7 +119,7 @@ HistoryChange {
 }
 ```
 
-非 `Modified` 节点包含一条 change；`Modified` 节点是 series，包含窗口内的多条 change。
+非 `Modified` 节点包含一条 change；`Modified` 节点是 series，包含窗口内的多条 change。审批写入与撤销产生的 change 都使用 `source = ServerWrite`。撤销 `Create` 提案时 `kind = Deleted`，撤销 `Update` 提案时 `kind = Modified`；`provenance_id` 分别指向原写入或撤销产生的 `Provenance`。
 
 ### 4.3 状态机
 
@@ -286,7 +286,7 @@ HistoryProvenanceRequest {
 }
 ```
 
-`history.provenance` 按 `ProvenanceId` 返回单次写入的溯源详情。
+`history.provenance` 按 `ProvenanceId` 返回单次写入或撤销的溯源详情。
 
 ## 7 溯源、身份关联与 Git 锚点
 
@@ -295,11 +295,16 @@ HistoryProvenanceRequest {
 ```text
 Provenance {
   id,                // ProvenanceId
+  operation,         // Write | Undo
   node_id?,
   principal,         // User | Agent | Plugin | Mcp
   provider?,
   model?,
-  proposal_id?,
+  plugin_id?,
+  plugin_version?,
+  plugin_command?,
+  proposal_id?,      // Write 时指向提案
+  undo_of?,          // Undo 时指向原 ProposalId
   run_id?,
   context: [ProvenanceContext],
   approved_by?,
@@ -315,11 +320,16 @@ ProvenanceContext {
 }
 ```
 
-- 溯源用于 server 写入；扫描、监听与 Git 触发的 change 没有 provenance；
-- `principal` 表达操作来源；`approved_by` 表达审批者；
-- agent 写入保留 provider、model、run id 与上下文路径版本；
-- plugin 写入保留插件身份与提案 id；
-- `context` 保存路径与版本；
+- 溯源用于 server 写入与撤销；扫描、监听与 Git 触发的 change 没有 provenance；
+- `operation` 区分普通写入与撤销；普通写入为 `Write`，撤销为 `Undo`；
+- 普通写入的 `proposal_id` 指向提案；撤销的 `proposal_id` 为空，`undo_of` 指向原提案；
+- 撤销产生新的 `Provenance`，不复用原写入的 `provenance_id`；
+- `principal` 表达操作来源；撤销时是执行撤销的主体；
+- `approved_by` 表达审批者；撤销不填 `approved_by`；
+- `status` 表达该次操作结果，不表达当前文档状态；原写入与撤销记录都为 `Applied`；
+- agent 写入与撤销保留 provider、model、run id 与上下文路径版本；
+- plugin 写入保留 `plugin_id`、`plugin_version`、`plugin_command` 与 `proposal_id`；撤销保留同等插件信息与 `undo_of`；
+- `context` 保存路径与版本；撤销的 `context` 记录被撤销版本；
 - 未知溯源返回 `history.provenance_not_found`。
 
 ### 7.2 身份关联
@@ -386,7 +396,7 @@ history.changed {
 - `Change`：向开放 series 追加 change；
 - `Integrate`：commit 吸收、工作区链放弃、旧提交归档导致 Active 视图变化；
 - `Ref`：branch、tag 或 HEAD 变化；
-- `Provenance`：溯源状态变化；
+- `Provenance`：溯源创建或状态变化，包括撤销产生的溯源；
 - `Identity`：身份关联创建或确认；
 - scope 为 `workspace`；client 收到后重新读取摘要、树或变更；
 - 纯观察与 Git 元数据刷新通过摘要查询体现；
@@ -410,7 +420,7 @@ history.changed {
 | --- | --- |
 | workspace | 提供扫描结果与去抖变化流；history 记录观察与变更 |
 | document | `document.view` 触发观察；`document.changed` 与 `history.changed` 共同刷新界面 |
-| write | 写入完成后登记节点与溯源；history 提供 `Provenance` 查询 |
+| write | 审批写入与撤销完成后登记节点与溯源；history 提供 `Provenance` 查询 |
 | health | 读取 `last_changed_at`、`GitAnchor` 与生命周期字段，判断过期状态 |
 | agent | 读取历史摘要、树、变更与溯源，形成上下文；写入进入 write 域 |
 | plugin | 插件提案的溯源通过 write 域记录，history 提供查询 |

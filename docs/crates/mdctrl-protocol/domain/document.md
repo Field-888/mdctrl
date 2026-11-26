@@ -1,6 +1,6 @@
 # mdctrl-protocol 文档
 
-> 文档状态：草案 · 最后复核：2026-11-25
+> 文档状态：草案 · 最后复核：2026-11-26
 
 > document 定义文档身份、状态、摘要、列表、查看、大纲、链接与反链。
 
@@ -233,7 +233,7 @@ document.changed {
 | write | 使用 `DocumentVersion` 与指纹作为写入基准；提案、差异、审批与写入由 write 域定义 |
 | health | 读取文档元数据与链接结果，生成断链、过期与元数据检查 |
 | search | 搜索命中通过 `document.view` 打开；文件名查找由 search 域负责 |
-| media | View 中的媒体占位与就绪事件由 media 与 view 域协作 |
+| media | 提供媒体资源、`media.read`、就绪/失败事件与降级；View 承载占位、实际尺寸与降级 |
 | agent / plugin | 通过 document 原语读取文档、元数据、大纲与链接；写入进入 write 域 |
 
 跨域流程见 [domain.md](../domain.md)。

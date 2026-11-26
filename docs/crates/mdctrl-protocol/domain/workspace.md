@@ -1,6 +1,6 @@
 # mdctrl-protocol 工作区
 
-> 文档状态：草案 · 最后复核：2026-11-25
+> 文档状态：草案 · 最后复核：2026-11-26
 
 > workspace 定义工作区状态、配置契约、服务原语、事件与错误。
 
@@ -206,7 +206,7 @@ workspace.scan_updated     { complete, documents, failed_regions, updated_at }
 
 - workspace 向 document、history、index、health 提供文档清单、扫描摘要、变化流与路径校验。
 - write 使用 workspace 的路径校验与原子写语义；提案、差异、审批与版本检查由 write 域定义。
-- media 通过 workspace 校验并读取本地资源；渲染、缓存与资源句柄由 media 域定义。
-- agent 与 plugin 通过服务原语访问文档与配置；路径由 workspace 校验。
+- media 通过 workspace 校验并读取本地图片；media 负责资源生成、缓存、读取与降级，workspace 提供本地变化监听。
+- agent 与 plugin 通过服务原语访问文档；路径由 workspace 校验。provider 与插件配置由 workspace 与 external port 管理。
 - Git 根与元数据由 history 提供；workspace 扫描排除 `.git/`。
 - 跨域流程见 [domain.md](../domain.md)。
