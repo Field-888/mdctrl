@@ -1,12 +1,12 @@
 # mdctrl-protocol 视图
 
-> 文档状态：草案 · 最后复核：2026-11-26
+> 文档状态：草案 · 最后复核：2026-11-27
 
 > view 定义 document.view 的 View 载荷、行模型、样式 token、媒体占位与诊断。
 
 ## 1 定位
 
-view 的入口是 document 域的 `document.view`；view 域定义 View 载荷与失效语义。server 生成布局行与显示宽度，client 按 View 行栅格化为终端 Cell。
+view 是阅读与检索的派生域，入口是 document 域的 `document.view`；view 域定义 View 载荷与失效语义。server 生成布局行与显示宽度，client 按 View 行栅格化为终端 Cell。
 
 View 使用 [base.md](../base.md) 的 `DocumentPath`、`DocumentVersion`、`Viewport`、`SourceSpan`、`ResourceId` 与 `PageInfo`。文档查看请求、exact/latest 与观察语义由 [document.md](document.md) 定义；样式 token 到终端颜色的映射由 client 主题负责。
 
@@ -160,7 +160,7 @@ View 的有效性由三个条件决定：
 - 终端宽度或主题模式变化：client 重新请求；
 - client 丢弃 `generation` 或 `viewport` 与请求不同的过期响应。
 
-View 失效由上游事件触发，client 按需重新查询。
+View 失效由上游事件触发，client 按需重新查询。`view.incremental` 表示 client 支持基于当前 View 的增量刷新；能力缺失时重新请求完整 View。
 
 ## 8 与其他域协作
 

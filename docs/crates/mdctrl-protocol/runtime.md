@@ -1,6 +1,6 @@
 # mdctrl-protocol 运行时控制
 
-> 文档状态：草案 · 最后复核：2026-11-23
+> 文档状态：草案 · 最后复核：2026-11-27
 
 > runtime 定义控制原语、握手、会话、请求生命周期、订阅、Job 与流控，是 client 使用 server 服务的控制面。
 
@@ -85,7 +85,7 @@ Welcome {
 
 原语协商以 `PrimitiveSet` 为单位。client 声明 required 与 optional 原语；server 返回支持集合。required 原语缺失时返回 `protocol.unsupported_primitive`，并列出缺失项。optional 原语缺失时 client 使用降级路径。
 
-能力协商以 `CapabilitySet` 为单位，表达原语内部的可选行为，例如 `view.incremental`、`media.image`、`write.diff_hunks`、`agent.stream` 与 `plugin.management`。`CapabilityId` 使用 `area.feature` 命名；`PrimitiveSet` 与 `CapabilitySet` 分别表示原语与能力集合。required 能力缺失时返回 `protocol.unsupported_capability`；optional 能力缺失时 client 选择兼容行为。
+能力协商以 `CapabilitySet` 为单位，表达原语内部的可选行为，例如 `workspace.propose`、`workspace.undo`、`view.incremental`、`media.image`、`write.diff_hunks`、`agent.stream` 与 `plugin.management`。`CapabilityId` 使用 `area.feature` 命名；`PrimitiveSet` 与 `CapabilitySet` 分别表示原语与能力集合。required 能力缺失时返回 `protocol.unsupported_capability`；optional 能力缺失时 client 选择兼容行为。
 
 `ClientInfo` 包含 `kind`、`name` 与 `version`。`ServerInfo` 包含 `name` 与 `version`。`WorkspaceInfo` 包含 `workspace_id`、`workspace_schema_version` 与展示名，工作区路径留在 server 内部。
 
@@ -95,13 +95,15 @@ Welcome {
 TerminalProfile {
   width,
   height,
+  cell_width_px?,
+  cell_height_px?,
   color_depth,     // Mono | Ansi16 | Ansi256 | TrueColor
   image_protocol,  // None | HalfBlock | Kitty | Sixel | ITerm2
   theme_mode       // Light | Dark | Unknown
 }
 ```
 
-握手提供初始 profile；View 请求可以更新宽度与主题。`RuntimeLimits` 公布会话的生效上限：
+单元格像素尺寸供 media 做位图化；缺失时 server 使用默认尺寸，client 按 Cell 缩放。握手提供初始 profile；View 请求可以更新宽度与主题。`RuntimeLimits` 公布会话的生效上限：
 
 | 限制 | 含义 |
 | --- | --- |

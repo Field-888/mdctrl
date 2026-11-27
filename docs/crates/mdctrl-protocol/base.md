@@ -1,6 +1,6 @@
 # mdctrl-protocol 基础值模型
 
-> 文档状态：草案 · 最后复核：2026-11-23
+> 文档状态：草案 · 最后复核：2026-11-27
 
 > base 定义 protocol 中跨原语、跨消息、跨外部端口共同使用的值、编码与兼容规则。
 
@@ -25,8 +25,10 @@ base 是 protocol 的共同值模型。它规定标识、路径、版本、时�
 | `JobId` | server | 长任务句柄 |
 | `SubscriptionId` | server | 事件订阅句柄 |
 | `ProposalId` | server | 写入提案句柄 |
+| `HunkId` | server | 写入差异块句柄 |
 | `RunId` | server | agent 运行句柄 |
 | `ResourceId` | server | 媒体资源句柄 |
+| `PluginId` | server | 插件句柄 |
 
 ID 使用不透明 ASCII 字符串，长度 1..=128 字节，区分大小写，序列化为 JSON 字符串。`RequestId` 由 client 生成，在会话内唯一；其余 ID 由 server 生成。server 按会话隔离 `RequestId` 命名空间，并以 `(SessionId, RequestId)` 关联请求与响应；内部请求句柄留在实现层。client 与 plugin 按不透明值处理 ID，ID 的内部结构由所有者定义。`WorkspaceId` 是与文件系统路径解耦的句柄。
 
@@ -128,6 +130,8 @@ Null | Bool | Integer | Float | String | Array | Object
 对象键为字符串，数组元素可以为任意 `Value`。浮点为有限值，拒绝 NaN 与 Infinity。整数保持在 JSON 安全范围内；精度敏感值使用字符串。
 
 `Value` 用于 frontmatter 元数据、错误详情、plugin manifest 扩展与外部 DTO。结构化载荷使用具名类型；`Value` 服务于开放式与扩展字段。frontmatter 使用 `Map<String, Value>` 表达。
+
+`Binary` 表示 base64 编码的字节串，JSON 中序列化为字符串；embedded typed channel 使用原始字节。
 
 server 对 `Value` 的深度、字符串长度与集合大小设置上限，超出时返回 `protocol.limit_exceeded`。
 

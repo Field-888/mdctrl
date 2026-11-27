@@ -1,6 +1,6 @@
 # mdctrl-protocol 媒体
 
-> 文档状态：草案 · 最后复核：2026-11-26
+> 文档状态：草案 · 最后复核：2026-11-27
 
 > media 定义公式、Mermaid 与图片资源的读取、状态、事件与降级。
 
@@ -45,7 +45,7 @@ MediaReadReply {
   mime,
   size,
   offset,
-  data,       // base64 字符串
+  data,       // Binary
   eof
 }
 ```
@@ -53,7 +53,7 @@ MediaReadReply {
 - `offset` 省略时为 0。
 - `max_bytes` 省略时由 server 选择块大小；显式提供时受 server 与 `MAX_MESSAGE_BYTES` 约束，server 可以返回更小的块。
 - `size` 是资源总字节数。
-- `data` 在 wire 上使用 base64 字符串；embedded typed channel 使用原始字节。
+- `data` 使用 base 的 `Binary`；wire 使用 base64 字符串，embedded typed channel 使用原始字节。
 - `eof = true` 表示已读到末尾。
 - `offset` 越界或 `max_bytes` 非法返回 `media.invalid_range`。
 
@@ -240,7 +240,6 @@ media 根据 client 的终端能力选择生成与降级路径：
 | write | 写入只处理文本引用；媒体二进制留在 media 资源与缓存 |
 | index | 索引消费文档文本与元数据；媒体二进制留在 media 缓存 |
 | health | 健康规则保持现有四类；媒体失败通过 ViewDiagnostic 表达 |
-| agent | 通过 document 与 media 读取文档和媒体上下文；媒体生成由 server 完成 |
 | plugin / MCP | 按接入策略使用只读媒体读取；媒体生成由 server 完成 |
 | TUI / CLI | TUI 负责终端图片协议与 Cell 栅格化；CLI 使用文本或源码降级 |
 

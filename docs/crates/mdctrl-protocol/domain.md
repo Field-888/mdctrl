@@ -16,14 +16,14 @@ domain 是 protocol 的数据面。它规定 server 对外提供哪些业务能�
 
 [base.md](base.md) 提供标识、路径、版本、时间、错误与序列化；[runtime.md](runtime.md) 提供控制原语、会话、请求生命周期、订阅与 Job；[external.md](external.md) 提供 plugin、MCP、Git、provider 与 media 的端口映射；[implementation.md](implementation.md) 提供 Rust 类型、分派与测试。各域的服务原语、载荷、错误与事件由 `domain/*.md` 定义。
 
-provider、MCP、Git 与插件进程通过 external port 接入或提供能力；服务域目录聚焦 server 的业务能力。跨域组合由 server 编排，client 消费原语、结果与事件。
+provider、MCP、Git、media renderer 与插件进程通过 external port 接入或提供能力；服务域目录聚焦 server 的业务能力。跨域组合由 server 编排，client 消费原语、结果与事件。
 
 ## 2 域组与依赖
 
 | 组 | 域 | 主要依赖 |
 | --- | --- | --- |
 | 基础状态 | workspace、document、history | workspace → document → history |
-| 阅读与检索 | view、index、search、health | document/workspace → view；workspace/document → index → search/health |
+| 阅读与检索 | view、index、search、health | document/workspace → view；workspace/document → index → search；index + workspace/document/history → health |
 | 写入与扩展 | write、media、agent、plugin | document/history/workspace → write；view/workspace → media；read 域 + write → agent/plugin |
 
 - 依赖单向、无环。
@@ -83,7 +83,7 @@ id, access, execution, input, output, errors, events, policy, limits, since, dep
 | 媒体 | view、media、client | 媒体描述、`media.read`、就绪/失败事件 |
 | Agent | agent、document/search/health/history、write、provider | 报告、提案、溯源 |
 | Plugin | plugin、workspace、write、view、runtime | 插件命令、提案、插件视图 |
-| MCP | external port、document/search/health/history | 只读结果 |
+| MCP | external port、document/search/health/backlinks | 只读结果 |
 
 ### 5.1 打开与阅读
 
@@ -351,7 +351,7 @@ flowchart LR
 - 人工保存使用 `write.propose` + `write.approve` 自审批。
 - Agent 与 Plugin 提案保持 `Pending`，由 User 审批；Mcp 写入暂缓。
 - 提案 owner 可撤回；已执行写入由 owner 在撤销窗口内撤销。
-- 能力使用 `area.feature` 命名，例如 `workspace.read`、`workspace.propose`、`workspace.undo`、`write.diff_hunks`、`media.image`、`agent.stream`、`plugin.management`。
+- 能力使用 `area.feature` 命名，例如 `workspace.read`、`workspace.propose`、`workspace.undo`、`view.incremental`、`write.diff_hunks`、`media.image`、`agent.stream`、`plugin.management`。
 
 ## 8 错误与限制
 

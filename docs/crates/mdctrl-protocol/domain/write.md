@@ -1,6 +1,6 @@
 # mdctrl-protocol 文档写入
 
-> 文档状态：草案 · 最后复核：2026-11-26
+> 文档状态：草案 · 最后复核：2026-11-27
 
 > write 定义编辑提案、差异、审批、写入、撤销与溯源关联。
 
@@ -177,7 +177,7 @@ WriteApproveRequest {
 - 包含未知差异块或空选择返回 `write.invalid_hunk`。
 - 非 User 调用返回 `permission.denied`。
 
-审批以 `DocumentFingerprint` 比较版本；`DocumentRevision` 用于展示与排序。
+审批以 `DocumentFingerprint` 比较版本；`DocumentRevision` 用于展示与排序。`write.diff_hunks` 表示 client 可以展示并提交局部差异选择；能力缺失时 `write.approve` 省略 `hunks`，应用全部差异。
 
 ### 4.2 写入
 

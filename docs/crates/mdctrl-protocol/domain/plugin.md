@@ -1,6 +1,6 @@
 # mdctrl-protocol 插件
 
-> 文档状态：草案 · 最后复核：2026-11-26
+> 文档状态：草案 · 最后复核：2026-11-27
 
 > plugin 定义插件声明、能力、命令、状态、插件视图与写入协作。
 
@@ -35,6 +35,8 @@ plugin.<plugin_id>.<command>
 
 管理原语使用 `plugin.list`、`plugin.install` 等保留名；插件 id 与命令名避开这些保留字。插件进入 `Ready` 后，`runtime.catalog` 返回其注册命令；client 通过 `plugin.status` 获知状态变化并重新读取目录。
 
+`plugin.management` 是可选 client 能力，存在时 client 可以调用安装、移除、启用与停用原语；缺失时 client 读取插件列表与运行状态。
+
 ## 3 Manifest 与能力
 
 ```text
@@ -67,7 +69,7 @@ PluginCapability {
 }
 ```
 
-- `workspace.read`：读取文档、搜索、反链与媒体资源等只读查询。
+- `workspace.read`：读取文档、搜索、反链、健康、历史与媒体资源等只读查询。
 - `workspace.propose`：提交写入提案。
 - `workspace.undo`：撤销自己发起的已执行提案。
 - `command.invoke`：通过命令总线调用其他命令。
